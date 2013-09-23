@@ -1,13 +1,15 @@
 /*
- * Commande d'une cube à LED
+ * Commande d'un cube à LED
  */
 
 #include "Tlc5940.h"
+#include "animation_stream.h"
+#include "commands.h"
 
 /* Tableau de correspondance x, y -> Canal TLC :
    tlc_order[y][x] = Canal TLC
- */ 
-const TLC_CHANNEL_TYPE tlc_order[][4] = {
+ */
+const PROGMEM byte tlc_order[][4] = {
   { 15, 14, 13, 11 }, /* y = 0 */
   { 12, 10,  9,  8 }, /* y = 1 */
   {  4,  5,  6,  7 }, /* y = 2 */
@@ -17,71 +19,24 @@ const TLC_CHANNEL_TYPE tlc_order[][4] = {
 /* Tableau de correspondance z -> pin transistor
    transistor_order[z] = pin transistor
  */
-const unsigned transistor_order[] = {
+const PROGMEM byte transistor_order[] = {
   5, /* z = 0 */
   7, /* z = 1 */
   4, /* z = 2 */
   6, /* z = 3 */
 };
 
-/* Valeur des LEDS (0 - 4095)
+/* Valeur des LEDS (0 - 255)
    values[z][y][x] = val
  */
-const unsigned F = 4095;
-unsigned values[4][4][4] = {
-    /* z = 0 */
-    { { F, 0, 0, F }, 
-      { 0, 0, 0, 0 },
-      { 0, 0, 0, 0 },
-      { F, 0, 0, F } },
+byte values[4][4][4];
 
-    /* z = 1 */
-    { { 0, 0, 0, 0 },
-      { 0, F, F, 0 },
-      { 0, F, F, 0 },
-      { 0, 0, 0, 0 } },
+#define TEST_ANIMATION "\x43\x4c\x00\xff\x53\x0b\x4c\x01\xff\x53\x0b\x4c\x02\xff\x53\x0b\x4c\x03\xff\x53\x0b\x4c\x04\xff\x53\x0b\x4c\x05\xff\x53\x0b\x4c\x06\xff\x53\x0b\x4c\x07\xff\x53\x0b\x4c\x08\xff\x53\x0b\x4c\x09\xff\x53\x0b\x4c\x0a\xff\x53\x0b\x4c\x0b\xff\x53\x0b\x4c\x0c\xff\x53\x0b\x4c\x0d\xff\x53\x0b\x4c\x0e\xff\x53\x0b\x4c\x0f\xff\x53\x0b\x4c\x10\xff\x53\x0b\x4c\x11\xff\x53\x0b\x4c\x12\xff\x53\x0b\x4c\x13\xff\x53\x0b\x4c\x14\xff\x53\x0b\x4c\x15\xff\x53\x0b\x4c\x16\xff\x53\x0b\x4c\x17\xff\x53\x0b\x4c\x18\xff\x53\x0b\x4c\x19\xff\x53\x0b\x4c\x1a\xff\x53\x0b\x4c\x1b\xff\x53\x0b\x4c\x1c\xff\x53\x0b\x4c\x1d\xff\x53\x0b\x4c\x1e\xff\x53\x0b\x4c\x1f\xff\x53\x0b\x4c\x20\xff\x53\x0b\x4c\x21\xff\x53\x0b\x4c\x22\xff\x53\x0b\x4c\x23\xff\x53\x0b\x4c\x24\xff\x53\x0b\x4c\x25\xff\x53\x0b\x4c\x26\xff\x53\x0b\x4c\x27\xff\x53\x0b\x4c\x28\xff\x53\x0b\x4c\x29\xff\x53\x0b\x4c\x2a\xff\x53\x0b\x4c\x2b\xff\x53\x0b\x4c\x2c\xff\x53\x0b\x4c\x2d\xff\x53\x0b\x4c\x2e\xff\x53\x0b\x4c\x2f\xff\x53\x0b\x4c\x30\xff\x53\x0b\x4c\x31\xff\x53\x0b\x4c\x32\xff\x53\x0b\x4c\x33\xff\x53\x0b\x4c\x34\xff\x53\x0b\x4c\x35\xff\x53\x0b\x4c\x36\xff\x53\x0b\x4c\x37\xff\x53\x0b\x4c\x38\xff\x53\x0b\x4c\x39\xff\x53\x0b\x4c\x3a\xff\x53\x0b\x4c\x3b\xff\x53\x0b\x4c\x3c\xff\x53\x0b\x4c\x3d\xff\x53\x0b\x4c\x3e\xff\x53\x0b\x4c\x3f\xff\x53\x0b\x43\x4c\x3f\xff\x53\x0b\x4c\x3e\xff\x53\x0b\x4c\x3d\xff\x53\x0b\x4c\x3c\xff\x53\x0b\x4c\x3b\xff\x53\x0b\x4c\x3a\xff\x53\x0b\x4c\x39\xff\x53\x0b\x4c\x38\xff\x53\x0b\x4c\x37\xff\x53\x0b\x4c\x36\xff\x53\x0b\x4c\x35\xff\x53\x0b\x4c\x34\xff\x53\x0b\x4c\x33\xff\x53\x0b\x4c\x32\xff\x53\x0b\x4c\x31\xff\x53\x0b\x4c\x30\xff\x53\x0b\x4c\x2f\xff\x53\x0b\x4c\x2e\xff\x53\x0b\x4c\x2d\xff\x53\x0b\x4c\x2c\xff\x53\x0b\x4c\x2b\xff\x53\x0b\x4c\x2a\xff\x53\x0b\x4c\x29\xff\x53\x0b\x4c\x28\xff\x53\x0b\x4c\x27\xff\x53\x0b\x4c\x26\xff\x53\x0b\x4c\x25\xff\x53\x0b\x4c\x24\xff\x53\x0b\x4c\x23\xff\x53\x0b\x4c\x22\xff\x53\x0b\x4c\x21\xff\x53\x0b\x4c\x20\xff\x53\x0b\x4c\x1f\xff\x53\x0b\x4c\x1e\xff\x53\x0b\x4c\x1d\xff\x53\x0b\x4c\x1c\xff\x53\x0b\x4c\x1b\xff\x53\x0b\x4c\x1a\xff\x53\x0b\x4c\x19\xff\x53\x0b\x4c\x18\xff\x53\x0b\x4c\x17\xff\x53\x0b\x4c\x16\xff\x53\x0b\x4c\x15\xff\x53\x0b\x4c\x14\xff\x53\x0b\x4c\x13\xff\x53\x0b\x4c\x12\xff\x53\x0b\x4c\x11\xff\x53\x0b\x4c\x10\xff\x53\x0b\x4c\x0f\xff\x53\x0b\x4c\x0e\xff\x53\x0b\x4c\x0d\xff\x53\x0b\x4c\x0c\xff\x53\x0b\x4c\x0b\xff\x53\x0b\x4c\x0a\xff\x53\x0b\x4c\x09\xff\x53\x0b\x4c\x08\xff\x53\x0b\x4c\x07\xff\x53\x0b\x4c\x06\xff\x53\x0b\x4c\x05\xff\x53\x0b\x4c\x04\xff\x53\x0b\x4c\x03\xff\x53\x0b\x4c\x02\xff\x53\x0b\x4c\x01\xff\x53\x0b\x4c\x00\xff\x53\x0b"
+//#define TEST_ANIMATION "C"
 
-    /* z= 2 */
-    { { 0, 0, 0, 0 },
-      { 0, F, F, 0 },
-      { 0, F, F, 0 },
-      { 0, 0, 0, 0 } },
-
-    /* z = 3 */
-    { { F, 0, 0, F },
-      { 0, 0, 0, 0 },
-      { 0, 0, 0, 0 },
-      { F, 0, 0, F } }
-};
-
-void setLed(unsigned x, unsigned y, unsigned z, unsigned val)
-{
-  values[z][y][x] = val;
-}
-
-unsigned getLed(unsigned x, unsigned y, unsigned z)
-{
-  return values[z][y][x];
-}
-
-/* Parcourt les 4 étages */
-void refresh()
-{
-  for (unsigned z = 0; z < 4; z++) {
-    for (unsigned y = 0; y < 4; y++) {
-      for (unsigned x = 0; x < 4; x++) {
-        unsigned val = getLed(x, y, z);
-        Tlc.set(tlc_order[y][x], val);
-      }
-    }
-
-    Tlc.update();
-    delay(1);
-    digitalWrite(transistor_order[z], LOW);
-    delay(1);
-    digitalWrite(transistor_order[z], HIGH);
-  }
-}
+byte animation[1500] = TEST_ANIMATION;
+int animation_size = sizeof(TEST_ANIMATION);
+AnimationStream anim(animation_size, animation);
 
 void setup()
 {
@@ -98,15 +53,50 @@ void setup()
   digitalWrite(7, HIGH);
 
   Tlc.init();
+/*
+  Serial.print("free ram = ");
+  Serial.println(availableMemory());
+*/
 }
 
-void discard()
+void setLed(byte x, byte y, byte z, byte val)
 {
+  values[z][y][x] = val;
+}
+
+byte getLed(byte x, byte y, byte z)
+{
+  return values[z][y][x];
+}
+
+/* Parcourt les 4 étages */
+void refresh()
+{
+  for (byte z = 0; z < 4; z++) {
+    byte tr = pgm_read_byte(&transistor_order[z]);
+
+    for (byte y = 0; y < 4; y++) {
+      for (byte x = 0; x < 4; x++) {
+        byte val = getLed(x, y, z);
+        byte order = pgm_read_byte(&tlc_order[y][x]);
+        Tlc.set(order, map(val, 0, 255, 0, 4095));
+      }
+    }
+
+    Tlc.update();
+    delay(1);
+    digitalWrite(tr, LOW);
+    delay(2);
+    digitalWrite(tr, HIGH);
+  }
+}
+
+void discard() {
   while (Serial.available()) {
     char poked = Serial.peek();
 
     if (poked >= 'A' && poked <= 'Z')
-      return;
+      break;
 
     Serial.read();
   }
@@ -114,41 +104,27 @@ void discard()
 
 void loop()
 {
+  static Commands c1(Serial);
+  static Commands c2(anim);
+
   refresh();
+  discard();
+  c1.update();
+  c2.update();
+}
 
-  if (Serial.available()) {
-    char cmd = Serial.read();
+// this function will return the number of bytes currently free in RAM
+// written by David A. Mellis
+// based on code by Rob Faludi http://www.faludi.com
+int availableMemory() {
+  int size = 4096; // Use 2048 with ATmega328
+  byte *buf;
 
-    if (cmd == 'W') {
-      for (unsigned z = 0; z < 4; z++) {
-        for (unsigned y = 0; y < 4; y++) {
-          for (unsigned x = 0; x < 4; x++) {
-            setLed(x, y, z, Serial.parseInt());
-          }
-        }
-      }
-      //Serial.println("1");
-    }
-    else if (cmd == 'S') {
-      unsigned x, y, z, val;
-      x = Serial.parseInt();
-      y = Serial.parseInt();
-      z = Serial.parseInt();
-      val = Serial.parseInt();
+  while ((buf = (byte *) malloc(--size)) == NULL)
+    ;
 
-      setLed(x, y, z, val);
-      Serial.println("1");
-    }
-    else if (cmd == 'C') {
-      memset(values, 0, 64);
-      Serial.println("1");
-    }
-    else {
-      Serial.println("0");
-      discard();
-    }
+  free(buf);
 
-    Serial.flush();
-  }
+  return size;
 }
 
